@@ -19,8 +19,6 @@ async function testConnection() {
     console.log('Successfully connected to PostgreSQL! Server time:', res.rows[0].now);
   } catch (err: any) {
     console.error('Connection error:', err.stack);
-  } finally {
-    await pool.end();
   }
 }
 
