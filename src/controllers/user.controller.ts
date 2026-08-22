@@ -1,6 +1,17 @@
 import type { Request, Response } from "express";
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not defined in .env");
+}
+
 
 const stringNotNullValidator = (str: unknown) => {
   if (typeof(str) !== "string" || str === "") {
@@ -53,8 +64,24 @@ export const registerUser = async (req: Request, res: Response) => {
       [name, email, hashedPassword]
     );
 
+    const user = result.rows[0];
+    
+    const token = jwt.sign(
+      {
+        userId: user.id,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
     //Return to API call
-    return res.status(201).json({job:result.rows[0]});
+    return res.status(201).json({
+          message: "User registered successfully",
+          user,
+          token,
+    });
     
   }
   catch (error: any) {
