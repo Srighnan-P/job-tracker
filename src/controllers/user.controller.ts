@@ -91,3 +91,66 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 }
 
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    //Request
+    const {
+      email,
+      password
+    } = req.body;
+
+    //Validation
+    if (!stringNotNullValidator(email)
+      || !stringNotNullValidator(password)) 
+    {
+        console.error("the data must be string");
+        const strError = new Error("the data must be string") as Error & {status: number};
+        strError.status = 400;
+        throw strError;
+    }
+
+    //Checking if email exists
+    const userResult = await pool.query(
+      `SELECT * FROM users WHERE email = $1 LIMIT 1;`, [email]
+    );
+
+    if (!userResult.rowCount || userResult.rowCount === 0) {
+      const error = new Error("Email doesn't exists") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+
+    const user = userResult.rows[0];
+
+    //Comparing password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      const error = new Error("Invalid email or password") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user.id,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    //Return to API call
+    return res.status(200).json({
+          message: "User logged in successfully",
+          user,
+          token,
+    });
+  }
+  catch (error: any) {
+    console.error(`Error in logging in user: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+}
