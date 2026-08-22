@@ -90,7 +90,7 @@ export const createJob = async (req: Request, res: Response) => {
     return res.status(201).json({job:result.rows[0]});
   }
   catch (error: any) {
-    console.error(`Error creating job ${error.message}`);
+    console.error(`Error creating job: ${error.message}`);
     const statusCode = error.status || 500;
     return res.status(statusCode).json({ message: error.message });
   }
