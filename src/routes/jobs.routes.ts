@@ -1,4 +1,5 @@
 import express from "express";
+import { authenticate } from "../middlewares/auth.middleware.js";
 import { 
     createJob, 
     getAllJobs, 
@@ -9,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post("/", createJob);
+router.post("/",authenticate, createJob);
 router.get("/", getAllJobs);
 router.get("/:id", getJobById);
 router.put("/:id", updateJob);

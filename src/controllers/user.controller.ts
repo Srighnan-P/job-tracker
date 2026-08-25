@@ -154,3 +154,37 @@ export const loginUser = async (req: Request, res: Response) => {
     return res.status(statusCode).json({ message: error.message });
   }
 }
+
+export const getUserProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+
+    const userResult = await pool.query(
+      `SELECT id, name, email, "createdAt", "updatedAt" FROM users WHERE id = $1 LIMIT 1;`, [userId]
+    );
+
+    if (!userResult.rowCount || userResult.rowCount === 0) {
+      const error = new Error("User not found") as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    const user = userResult.rows[0];
+
+    return res.status(200).json({
+      message: "User profile fetched successfully",
+      user,
+    });
+  }
+  catch (error: any) {
+    console.error(`Error in fetching user profile: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+}
