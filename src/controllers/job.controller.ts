@@ -3,22 +3,22 @@ import pool from "../config/db.js";
 
 //Validator functions
 const stringValidator = (str: unknown) => {
-  if (typeof(str) !== "string") {
-    return false;
-  }
-  return true;
-}
+  if (str != undefined)
+    return typeof str === "string";
+  else
+    return true;
+};
 
 const stringNotNullValidator = (str: unknown) => {
-  if (typeof(str) !== "string" || str === "") {
+  if (typeof (str) !== "string" || str === "") {
     return false;
   }
   return true;
-}
+};
 
 const numValidator = (num: unknown) => {
   return typeof num === "number";
-}
+};
 
 export const createJob = async (req: Request, res: Response) => {
   //Request
