@@ -29,25 +29,25 @@ export const createApplication = async (req: Request, res: Response) => {
   let client;
   let transactionBegin = false;
   try {
+    const userId = req.userId;
+
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+
     const {
       job,
       application
     } = req.body;
 
-    //String Validation
-    // if (!stringNotNullValidator(job) || !stringNotNullValidator(application)) {
-    //   console.error("the data must be non-empty");
-    //   const strError = new Error("the data must be non-empty") as Error & {status: number};
-    //   strError.status = 400;
-      
-    //   throw strError;
-    // }
 
     if (!stringNotNullValidator(job.title)
       ||!stringNotNullValidator(job.companyName)
       ||!stringNotNullValidator(job.workMode)
-      ||!stringNotNullValidator(application.status)
-    ) {
+      || !stringNotNullValidator(application.status)) {
+      
       console.error("the data must be non-empty string");
       const strError = new Error("the data must be non-empty string") as Error & {status: number};
       strError.status = 400;
@@ -55,9 +55,8 @@ export const createApplication = async (req: Request, res: Response) => {
       throw strError;
     }
 
-    if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax) ||
-      !numValidator(application.userId)
-    ) {
+    if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
+      
       console.error("the data must be number");
       const strError = new Error("the data must be number") as Error & {status: number};
       strError.status = 400;
@@ -86,7 +85,7 @@ export const createApplication = async (req: Request, res: Response) => {
       (user_id, job_id, status, notes)
       vALUES ($1, $2, $3, $4)
       RETURNING *`,
-      [application.userId, jobResult.rows[0].id, application.status, application.notes]
+      [userId, jobResult.rows[0].id, application.status, application.notes]
     )
     await client.query("COMMIT")
     transactionBegin = false;
@@ -114,7 +113,66 @@ export const createApplication = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllApplications = async (req: Request, res: Response) => { };
+export const getAllApplications = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+    
+
+    if (!numValidator(userId)) {
+      console.error("the data must be number");
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    const result = await pool.query(
+      ` SELECT
+          a.id AS application_id,
+          a.user_id,
+          a.status,
+          a.notes,
+          a.created_at,
+          a.updated_at,
+      
+          j.id AS job_id,
+          j.title,
+          j.company_name,
+          j.location,
+          j.work_mode,
+          j.employment_type,
+          j.salary_min,
+          j.salary_max,
+          j.salary_currency,
+          j.description,
+          j.job_url,
+          j.source
+      
+        FROM applications AS a
+        JOIN jobs AS j
+            ON a.job_id = j.id
+        
+        WHERE a.user_id = $1
+        
+        ORDER BY a.created_at DESC;
+      `, [userId]
+    )
+
+    return res.status(201).json({job:result.rows});
+      
+  }
+  catch (error: any) {
+    console.error(`Error getting all application: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+};
 
 export const getApplicationById = async (req: Request, res: Response) => { };
 
