@@ -15,16 +15,23 @@ const stringNotNullValidator = (str: unknown) => {
   return true;
 };
 
-const numValidator = (num: number) => {
-  if (typeof num !== "undefined") {
-    // console.log(num)
-    return typeof num === "number";
-  }
-  else
+const numValidator = (num: unknown) => {
+  if (typeof num === "undefined") {
     return true;
+  }
+
+  if (typeof num === "number") {
+    return Number.isFinite(num);
+  }
+
+  if (typeof num === "string") {
+    return num.trim() !== "" && !Number.isNaN(Number(num));
+  }
+
+  return false;
 };
 
-
+//Create application
 export const createApplication = async (req: Request, res: Response) => {
   let client;
   let transactionBegin = false;
@@ -113,6 +120,7 @@ export const createApplication = async (req: Request, res: Response) => {
   }
 };
 
+//Get all applications
 export const getAllApplications = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
@@ -164,17 +172,85 @@ export const getAllApplications = async (req: Request, res: Response) => {
       `, [userId]
     )
 
-    return res.status(201).json({job:result.rows});
+    return res.status(200).json({job:result.rows});
       
   }
   catch (error: any) {
-    console.error(`Error getting all application: ${error.message}`);
+    console.error(`Error getting all applications: ${error.message}`);
     const statusCode = error.status || 500;
     return res.status(statusCode).json({ message: error.message });
   }
 };
 
-export const getApplicationById = async (req: Request, res: Response) => { };
+//Get application by id
+export const getApplicationById = async (req: Request, res: Response) => {
+  try {
+    const applicationId = req.params.id;
+    const userId = req.userId;
+
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+    
+
+    if (!numValidator(userId)) {
+      console.error("the data must be number");
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    if (!numValidator(applicationId)) {
+      console.error("the data must be number");
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    const result = await pool.query(
+      ` SELECT
+          a.id AS application_id,
+          a.user_id,
+          a.status,
+          a.notes,
+          a.created_at,
+          a.updated_at,
+      
+          j.id AS job_id,
+          j.title,
+          j.company_name,
+          j.location,
+          j.work_mode,
+          j.employment_type,
+          j.salary_min,
+          j.salary_max,
+          j.salary_currency,
+          j.description,
+          j.job_url,
+          j.source
+      
+        FROM applications AS a
+        JOIN jobs AS j
+            ON a.job_id = j.id
+        
+        WHERE a.id = $1
+          AND a.user_id = $2;
+      `, [applicationId, userId]
+    )
+
+    return res.status(200).json({job:result.rows});
+    
+  }
+  catch (error: any) {
+    console.error(`Error getting application: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+};
 
 export const updateApplication = async (req: Request, res: Response) => { };
 
