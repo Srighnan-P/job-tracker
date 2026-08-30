@@ -252,6 +252,107 @@ export const getApplicationById = async (req: Request, res: Response) => {
   }
 };
 
-export const updateApplication = async (req: Request, res: Response) => { };
+//Update application by id
+export const updateApplication = async (req: Request, res: Response) => {
+  try {
+    const applicationId = req.params.id;
+    const userId = req.userId;
+    const {
+      job,
+      application
+    } = req.body;
 
+    //Validators
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+    
+
+    if (!numValidator(userId) || !numValidator(applicationId)) {
+      console.error("the data must be number");
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    if (!stringValidator(job.title)
+      ||!stringValidator(job.companyName)
+      ||!stringValidator(job.workMode)
+      ||!stringValidator(application.status)) {
+      
+      console.error("the data must be string");
+      const strError = new Error("the data must be string") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
+      console.error("the data must be number");
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    //Repository
+    const jobResult = await pool.query(
+      `UPDATE jobs
+        SET title = COALESCE($1, title),
+            company_name = COALESCE($2, company_name),
+            location = COALESCE($3, location),
+            work_mode = COALESCE($4, work_mode),
+            employment_type = COALESCE($5, employment_type),
+            salary_min = COALESCE($6, salary_min),
+            salary_max = COALESCE($7, salary_max),
+            salary_currency = COALESCE($8, salary_currency),
+            description = COALESCE($9, description),
+            job_url = COALESCE($10, job_url),
+            source = COALESCE($11, source)
+        WHERE id = (SELECT job_id FROM applications WHERE id = $12 AND user_id = $13)
+          AND EXISTS (SELECT 1 FROM applications WHERE id = $12 AND user_id = $13)
+        RETURNING *`,
+      [job.title, job.companyName, job.location, job.workMode, job.employmentType,
+        job.salaryMin, job.salaryMax, job.salaryCurrency, job.description,
+        job.jobUrl, job.source, applicationId, userId]
+    );
+
+    if (jobResult.rowCount === 0) {
+      const error = new Error("Job not found or not authorized") as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    const result = await pool.query(
+      `UPDATE applications
+        SET status = COALESCE($1, status),
+            notes = COALESCE($2, notes),
+            updated_at = NOW()
+        WHERE id = $3
+          AND user_id = $4
+        RETURNING *`,
+      [application.status, application.notes, applicationId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      const error = new Error("Application not found or not authorized") as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    return res.status(200).json({application:result.rows[0], job:jobResult.rows[0]});
+
+
+  }
+  catch (error: any) {
+    console.error(`Error updating application: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+};
+
+//Delete application by id
 export const deleteApplication = async (req: Request, res: Response) => { };
