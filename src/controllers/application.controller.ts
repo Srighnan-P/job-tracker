@@ -106,7 +106,7 @@ export const createApplication = async (req: Request, res: Response) => {
         await client.query("ROLLBACK");
       }
       catch(rollbackError) {
-        console.error(`Error creating application: ${rollbackError}`);
+        console.error(`Error rolling back transaction: ${rollbackError}`);
       }
     }
     console.error(`Error creating application: ${error.message}`);
@@ -172,7 +172,7 @@ export const getAllApplications = async (req: Request, res: Response) => {
       `, [userId]
     )
 
-    return res.status(200).json({job:result.rows});
+    return res.status(200).json({applications:result.rows});
       
   }
   catch (error: any) {
@@ -242,7 +242,7 @@ export const getApplicationById = async (req: Request, res: Response) => {
       `, [applicationId, userId]
     )
 
-    return res.status(200).json({job:result.rows});
+    return res.status(200).json({application:result.rows});
     
   }
   catch (error: any) {
@@ -254,6 +254,8 @@ export const getApplicationById = async (req: Request, res: Response) => {
 
 //Update application by id
 export const updateApplication = async (req: Request, res: Response) => {
+  let client;
+  let transactionBegin = false;
   try {
     const applicationId = req.params.id;
     const userId = req.userId;
@@ -299,7 +301,13 @@ export const updateApplication = async (req: Request, res: Response) => {
     }
 
     //Repository
-    const jobResult = await pool.query(
+    
+
+    client = await pool.connect();
+    await client.query("BEGIN")
+    transactionBegin = true;
+    
+    const jobResult = await client.query(
       `UPDATE jobs
         SET title = COALESCE($1, title),
             company_name = COALESCE($2, company_name),
@@ -326,7 +334,7 @@ export const updateApplication = async (req: Request, res: Response) => {
       throw error;
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE applications
         SET status = COALESCE($1, status),
             notes = COALESCE($2, notes),
@@ -343,16 +351,106 @@ export const updateApplication = async (req: Request, res: Response) => {
       throw error;
     }
 
+    await client.query("COMMIT")
+    transactionBegin = false;
+
     return res.status(200).json({application:result.rows[0], job:jobResult.rows[0]});
 
 
   }
   catch (error: any) {
+    if (client && transactionBegin) {
+      try {
+        await client.query("ROLLBACK");
+      }
+      catch(rollbackError) {
+        console.error(`Error rolling back transaction: ${rollbackError}`);
+      }
+    }
     console.error(`Error updating application: ${error.message}`);
     const statusCode = error.status || 500;
     return res.status(statusCode).json({ message: error.message });
   }
+  finally {
+    if (client) {
+      client.release();
+    }
+  }
 };
 
 //Delete application by id
-export const deleteApplication = async (req: Request, res: Response) => { };
+export const deleteApplication = async (req: Request, res: Response) => {
+  let client;
+  let transactionBegin = false;
+  try {
+    const userId = req.userId;
+    const applicationId = req.params.id;
+        
+    if (userId === undefined) {
+      const error = new Error("Authentication required") as Error & { status: number };
+      error.status = 401;
+      throw error;
+    }
+    
+    if (!numValidator(userId) || !numValidator(applicationId)) {
+      const strError = new Error("the data must be number") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
+    client = await pool.connect();
+    await client.query("BEGIN")
+    transactionBegin = true;
+    
+    
+    const applicationResult = await client.query(
+      `DELETE FROM applications
+        WHERE id = $1
+          AND user_id = $2
+        RETURNING job_id`,
+      [applicationId, userId]
+    );
+
+    if (applicationResult.rowCount === 0) {
+      const error = new Error("Application not found") as Error & { status: number; };
+      error.status = 404;
+      throw error;
+    }
+  
+    const jobId = applicationResult.rows[0].job_id;
+  
+    await client.query(
+      `DELETE FROM jobs
+        WHERE id = $1`,
+      [jobId]
+    );
+    
+
+    await client.query("COMMIT")
+    transactionBegin = false;
+  
+    return res.status(200).json({message:"Application deleted successfully"});
+    
+
+    
+  }
+  catch (error: any) {
+    if (client && transactionBegin) {
+      try {
+        await client.query("ROLLBACK");
+      }
+      catch(rollbackError) {
+        console.error(`Error rolling back transaction: ${rollbackError}`);
+      }
+    }
+    console.error(`Error deleting application: ${error.message}`);
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({ message: error.message });
+  }
+  finally {
+    if (client) {
+      client.release();
+    }
+  }
+};
