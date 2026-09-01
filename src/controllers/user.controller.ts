@@ -76,11 +76,17 @@ export const registerUser = async (req: Request, res: Response) => {
       }
     );
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     //Return to API call
     return res.status(201).json({
           message: "User registered successfully",
           user,
-          token,
     });
     
   }
@@ -141,11 +147,17 @@ export const loginUser = async (req: Request, res: Response) => {
       }
     );
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     //Return to API call
     return res.status(200).json({
           message: "User logged in successfully",
           user,
-          token,
     });
   }
   catch (error: any) {

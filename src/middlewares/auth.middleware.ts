@@ -12,23 +12,25 @@ if (!JWT_SECRET) {
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Get Authorization header
+    // Prefer HttpOnly cookie (browser clients), fall back to Bearer header (API clients e.g. Postman)
+    const cookieToken: string | undefined = req.cookies?.token;
     const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({message: "Authentication required",});
-    }
+    let token: string | undefined;
 
-    // Check Bearer format
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({message: "Invalid authorization format",});
+    if (cookieToken) {
+      // Cookie path — no stripping needed, value is the raw JWT
+      token = cookieToken;
+    } else if (authHeader) {
+      // Authorization header path
+      if (!authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "Invalid authorization format" });
+      }
+      token = authHeader.split(" ")[1];
     }
-
-    // Extract token
-    const token = authHeader.split(" ")[1];
 
     if (!token) {
-      return res.status(401).json({message: "Authentication token missing",});
+      return res.status(401).json({ message: "Authentication required" });
     }
 
     // Verify token
@@ -40,7 +42,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
       decoded === null ||
       !("userId" in decoded)
     ) {
-      return res.status(401).json({message: "Invalid authentication token",});
+      return res.status(401).json({ message: "Invalid authentication token" });
     }
 
     // Attach userId to request
@@ -50,6 +52,6 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     next();
   }
   catch (error: any) {
-    return res.status(401).json({message: "Invalid or expired token",});
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 }
