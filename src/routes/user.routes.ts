@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.post("/register", registerUser);
-router.get("/login", loginUser);
+router.post("/login", loginUser);
 router.get("/me", authenticate, getUserProfile);
 router.get("/test", authenticate, (req, res) => {
   res.json({
