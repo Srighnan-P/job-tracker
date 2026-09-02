@@ -5,12 +5,14 @@ import {
   registerUser,
   loginUser,
   getUserProfile,
+  logoutUser,
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/logout", authenticate, logoutUser);
 router.get("/me", authenticate, getUserProfile);
 router.get("/test", authenticate, (req, res) => {
   res.json({
