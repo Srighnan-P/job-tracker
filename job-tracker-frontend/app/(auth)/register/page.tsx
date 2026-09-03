@@ -23,9 +23,9 @@ export default function RegisterPage() {
       </div>
       <div className="relative hidden bg-muted lg:block">
         <img
-          src="/buildings.avif"
+          src="/nature.jpg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.7] dark:grayscale"
+          className="absolute inset-0 h-full w-full object-cover brightness-[0.6] "
         />
       </div>
     </div>
