@@ -242,7 +242,13 @@ export const getApplicationById = async (req: Request, res: Response) => {
       `, [applicationId, userId]
     )
 
-    return res.status(200).json({application:result.rows});
+    if (result.rows.length === 0) {
+      const error = new Error("Application not found") as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    return res.status(200).json({application:result.rows[0]});
     
   }
   catch (error: any) {
