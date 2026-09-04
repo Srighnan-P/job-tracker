@@ -26,6 +26,48 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
   withdrawn: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
 
+const STATUS_CARD_STYLES: Record<
+  ApplicationStatus,
+  { card: string; num: string; label: string }
+> = {
+  applied: {
+    card: "border-blue-200/80 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/30",
+    num: "text-blue-700 dark:text-blue-300",
+    label: "text-blue-600/90 dark:text-blue-400/90",
+  },
+  interview: {
+    card: "border-violet-200/80 bg-violet-50/70 dark:border-violet-900/50 dark:bg-violet-950/30",
+    num: "text-violet-700 dark:text-violet-300",
+    label: "text-violet-600/90 dark:text-violet-400/90",
+  },
+  offer: {
+    card: "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/30",
+    num: "text-emerald-700 dark:text-emerald-300",
+    label: "text-emerald-600/90 dark:text-emerald-400/90",
+  },
+  rejected: {
+    card: "border-red-200/80 bg-red-50/70 dark:border-red-900/50 dark:bg-red-950/30",
+    num: "text-red-700 dark:text-red-300",
+    label: "text-red-600/90 dark:text-red-400/90",
+  },
+  withdrawn: {
+    card: "border-zinc-200/80 bg-zinc-100/70 dark:border-zinc-800 dark:bg-zinc-900/40",
+    num: "text-zinc-700 dark:text-zinc-300",
+    label: "text-zinc-600/90 dark:text-zinc-400/90",
+  },
+};
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sept", "Oct", "Nov", "Dec",
+  ];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
     <span
@@ -184,19 +226,22 @@ export default function DashboardPage() {
         {/* ── Summary cards ── */}
         <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {(["applied", "interview", "offer", "rejected", "withdrawn"] as ApplicationStatus[]).map(
-            (status) => (
-              <div
-                key={status}
-                className="rounded-2xl border border-border bg-card p-4 text-center"
-              >
-                <div className="text-2xl font-bold tabular-nums">
-                  {counts[status] ?? 0}
+            (status) => {
+              const style = STATUS_CARD_STYLES[status];
+              return (
+                <div
+                  key={status}
+                  className={`rounded-2xl border p-4 text-center transition-all ${style.card}`}
+                >
+                  <div className={`text-2xl font-bold tabular-nums ${style.num}`}>
+                    {counts[status] ?? 0}
+                  </div>
+                  <div className={`mt-0.5 text-xs font-medium capitalize ${style.label}`}>
+                    {status}
+                  </div>
                 </div>
-                <div className="mt-0.5 text-xs capitalize text-muted-foreground">
-                  {status}
-                </div>
-              </div>
-            )
+              );
+            }
           )}
         </div>
 
@@ -280,7 +325,7 @@ export default function DashboardPage() {
                       {app.workMode}
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">
-                      {new Date(app.createdAt).toLocaleDateString()}
+                      {formatDate(app.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
