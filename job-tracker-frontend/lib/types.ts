@@ -27,6 +27,7 @@ export interface Application {
   userId: number;
   status: ApplicationStatus;
   notes: string | null;
+  appliedAt: string | null;
   createdAt: string;
   updatedAt: string;
 
@@ -65,6 +66,7 @@ export interface ApplicationFormData {
   application: {
     status: ApplicationStatus;
     notes?: string;
+    appliedAt?: string;
   };
 }
 

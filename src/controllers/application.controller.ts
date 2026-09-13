@@ -31,6 +31,17 @@ const numValidator = (num: unknown) => {
   return false;
 };
 
+const dateValidator = (d: unknown) => {
+  if (d === undefined || d === null || d === "") {
+    return true;
+  }
+  if (typeof d === "string" || d instanceof Date) {
+    const parsed = new Date(d as string | Date);
+    return !Number.isNaN(parsed.getTime());
+  }
+  return false;
+};
+
 //Create application
 export const createApplication = async (req: Request, res: Response) => {
   let client;
@@ -71,6 +82,13 @@ export const createApplication = async (req: Request, res: Response) => {
       throw strError;
     }
 
+    if (!dateValidator(application.appliedAt)) {
+      console.error("the applied date must be a valid date");
+      const strError = new Error("the applied date must be a valid date") as Error & {status: number};
+      strError.status = 400;
+      throw strError;
+    }
+
     client = await pool.connect();
     await client.query("BEGIN")
     transactionBegin = true;
@@ -89,10 +107,10 @@ export const createApplication = async (req: Request, res: Response) => {
 
     const result = await client.query(
       `INSERT INTO applications
-      (user_id, job_id, status, notes)
-      vALUES ($1, $2, $3, $4)
-      RETURNING *`,
-      [userId, jobResult.rows[0].id, application.status, application.notes]
+      (user_id, job_id, status, notes, "appliedAt")
+      VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_TIMESTAMP))
+      RETURNING *, TO_CHAR("appliedAt", 'YYYY-MM-DD') AS "appliedAt"`,
+      [userId, jobResult.rows[0].id, application.status, application.notes, application.appliedAt || null]
     )
     await client.query("COMMIT")
     transactionBegin = false;
@@ -146,6 +164,7 @@ export const getAllApplications = async (req: Request, res: Response) => {
           a.user_id,
           a.status,
           a.notes,
+          TO_CHAR(a."appliedAt", 'YYYY-MM-DD') AS applied_at,
           a.created_at,
           a.updated_at,
       
@@ -217,6 +236,7 @@ export const getApplicationById = async (req: Request, res: Response) => {
           a.user_id,
           a.status,
           a.notes,
+          TO_CHAR(a."appliedAt", 'YYYY-MM-DD') AS applied_at,
           a.created_at,
           a.updated_at,
       
@@ -298,6 +318,14 @@ export const updateApplication = async (req: Request, res: Response) => {
       throw strError;
     }
 
+    if (!dateValidator(application?.appliedAt)) {
+      console.error("the applied date must be a valid date");
+      const strError = new Error("the applied date must be a valid date") as Error & {status: number};
+      strError.status = 400;
+      
+      throw strError;
+    }
+
     if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
       console.error("the data must be number");
       const strError = new Error("the data must be number") as Error & {status: number};
@@ -344,11 +372,12 @@ export const updateApplication = async (req: Request, res: Response) => {
       `UPDATE applications
         SET status = COALESCE($1, status),
             notes = COALESCE($2, notes),
+            "appliedAt" = COALESCE($3, "appliedAt"),
             updated_at = NOW()
-        WHERE id = $3
-          AND user_id = $4
-        RETURNING *`,
-      [application.status, application.notes, applicationId, userId]
+        WHERE id = $4
+          AND user_id = $5
+        RETURNING *, TO_CHAR("appliedAt", 'YYYY-MM-DD') AS "appliedAt"`,
+      [application.status, application.notes, application.appliedAt || null, applicationId, userId]
     );
 
     if (result.rowCount === 0) {

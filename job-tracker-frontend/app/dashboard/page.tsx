@@ -15,6 +15,7 @@ import {
   XIcon,
   ExternalLinkIcon,
 } from "lucide-react";
+import { parseLocalDate } from "@/lib/utils";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ const STATUS_CARD_STYLES: Record<
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "—";
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   const months = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -325,7 +326,7 @@ export default function DashboardPage() {
                       {app.workMode}
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">
-                      {formatDate(app.createdAt)}
+                      {formatDate(app.appliedAt ?? app.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">

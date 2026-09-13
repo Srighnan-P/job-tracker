@@ -21,6 +21,7 @@ import {
   FileTextIcon,
   StickyNoteIcon,
 } from "lucide-react";
+import { parseLocalDate } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
   applied: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -242,8 +243,8 @@ export default function ApplicationDetailPage() {
                 </DetailRow>
               )}
               <DetailRow icon={<CalendarIcon className="size-4" />} label="Applied On">
-                {app.createdAt
-                  ? new Date(app.createdAt).toLocaleDateString(undefined, {
+                {app.appliedAt || app.createdAt
+                  ? parseLocalDate(app.appliedAt || app.createdAt).toLocaleDateString(undefined, {
                       year: "numeric",
                       month: "long",
                       day: "numeric",

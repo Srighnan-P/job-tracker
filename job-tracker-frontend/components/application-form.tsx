@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { applications } from "@/lib/api";
 import type { Application, ApplicationFormData, ApplicationStatus } from "@/lib/types";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Field,
   FieldError,
@@ -12,6 +13,9 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn, parseLocalDate } from "@/lib/utils";
 
 const STATUSES: ApplicationStatus[] = [
   "applied",
@@ -38,6 +42,16 @@ export function ApplicationForm({
   const isEdit = !!initial;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [appliedAt, setAppliedAt] = useState<Date | undefined>(() => {
+    if (initial?.appliedAt) {
+      return parseLocalDate(initial.appliedAt);
+    }
+    if (initial?.createdAt) {
+      return parseLocalDate(initial.createdAt);
+    }
+    return new Date();
+  });
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -68,6 +82,7 @@ export function ApplicationForm({
       application: {
         status: v("status") as ApplicationStatus,
         notes: v("notes") || undefined,
+        appliedAt: appliedAt ? format(appliedAt, "yyyy-MM-dd") : undefined,
       },
     };
 
@@ -132,6 +147,42 @@ export function ApplicationForm({
           </Field>
 
           <Field>
+            <FieldLabel htmlFor="appliedAt">Applied Date</FieldLabel>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger
+                id="appliedAt"
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full justify-start text-left font-normal h-9 rounded-4xl px-3",
+                  !appliedAt && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                {appliedAt ? (
+                  format(appliedAt, "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border-border bg-card shadow-xl" align="start">
+                <Calendar
+                  mode="single"
+                  selected={appliedAt}
+                  onSelect={(date) => {
+                    if (date) {
+                      setAppliedAt(date);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field>
             <FieldLabel htmlFor="workMode">Work Mode *</FieldLabel>
             <select
               id="workMode"
@@ -143,6 +194,23 @@ export function ApplicationForm({
               {WORK_MODES.map((m) => (
                 <option key={m} value={m}>
                   {m.charAt(0).toUpperCase() + m.slice(1)}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="employmentType">Employment Type</FieldLabel>
+            <select
+              id="employmentType"
+              name="employmentType"
+              defaultValue={initial?.employmentType ?? ""}
+              className="h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              <option value="">— select —</option>
+              {EMPLOYMENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
                 </option>
               ))}
             </select>
@@ -162,20 +230,13 @@ export function ApplicationForm({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="employmentType">Employment Type</FieldLabel>
-            <select
-              id="employmentType"
-              name="employmentType"
-              defaultValue={initial?.employmentType ?? ""}
-              className="h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              <option value="">— select —</option>
-              {EMPLOYMENT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </option>
-              ))}
-            </select>
+            <FieldLabel htmlFor="source">Source</FieldLabel>
+            <Input
+              id="source"
+              name="source"
+              defaultValue={initial?.source ?? ""}
+              placeholder="LinkedIn, referral…"
+            />
           </Field>
         </div>
 
@@ -214,27 +275,16 @@ export function ApplicationForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="jobUrl">Job URL</FieldLabel>
-            <Input
-              id="jobUrl"
-              name="jobUrl"
-              type="url"
-              defaultValue={initial?.jobUrl ?? ""}
-              placeholder="https://..."
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="source">Source</FieldLabel>
-            <Input
-              id="source"
-              name="source"
-              defaultValue={initial?.source ?? ""}
-              placeholder="LinkedIn, referral…"
-            />
-          </Field>
-        </div>
+        <Field>
+          <FieldLabel htmlFor="jobUrl">Job URL</FieldLabel>
+          <Input
+            id="jobUrl"
+            name="jobUrl"
+            type="url"
+            defaultValue={initial?.jobUrl ?? ""}
+            placeholder="https://..."
+          />
+        </Field>
 
         <Field>
           <FieldLabel htmlFor="description">Job Description</FieldLabel>
