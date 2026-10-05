@@ -1,22 +1,65 @@
 import type { Request, Response } from "express";
 import pool from "../config/db.js";
 
+export const VALID_APPLICATION_STATUSES = [
+  "applied",
+  "interview",
+  "offer",
+  "rejected",
+  "withdrawn",
+] as const;
+
+export type ApplicationStatus = (typeof VALID_APPLICATION_STATUSES)[number];
+
+export const VALID_WORK_MODES = [
+  "remote",
+  "hybrid",
+  "onsite",
+] as const;
+
+export type WorkMode = (typeof VALID_WORK_MODES)[number];
+
+const statusValidator = (status: unknown): status is ApplicationStatus => {
+  return typeof status === "string" && (VALID_APPLICATION_STATUSES as readonly string[]).includes(status);
+};
+
+const workModeValidator = (mode: unknown): mode is WorkMode => {
+  return typeof mode === "string" && (VALID_WORK_MODES as readonly string[]).includes(mode);
+};
+
 const stringValidator = (str: unknown) => {
-  if (str != undefined)
+  if (str != undefined && str !== null)
     return typeof str === "string";
   else
     return true;
 };
 
 const stringNotNullValidator = (str: unknown) => {
-  if (typeof (str) !== "string" || str === "") {
+  if (typeof (str) !== "string" || str.trim() === "") {
     return false;
   }
   return true;
 };
 
+const toNullIfEmpty = (val: unknown) => {
+  if (val === undefined || val === null) {
+    return null;
+  }
+  if (typeof val === "string" && val.trim() === "") {
+    return null;
+  }
+  return val;
+};
+
+const toNumOrNull = (num: unknown) => {
+  if (num === undefined || num === null || (typeof num === "string" && num.trim() === "")) {
+    return null;
+  }
+  return Number(num);
+};
+
 const numValidator = (num: unknown) => {
-  if (typeof num === "undefined") {
+  if (typeof num === "undefined" || num === null || num === "") {
     return true;
   }
 
@@ -55,22 +98,49 @@ export const createApplication = async (req: Request, res: Response) => {
       throw error;
     }
 
+    if (!req.body || typeof req.body !== "object") {
+      const error = new Error("Request body is required") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
     const {
       job,
       application
     } = req.body;
 
+    if (!job || typeof job !== "object" || !application || typeof application !== "object") {
+      const error = new Error("Both job and application objects are required in request body") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
 
     if (!stringNotNullValidator(job.title)
-      ||!stringNotNullValidator(job.companyName)
-      ||!stringNotNullValidator(job.workMode)
+      || !stringNotNullValidator(job.companyName)
+      || !stringNotNullValidator(job.workMode)
       || !stringNotNullValidator(application.status)) {
       
       console.error("the data must be non-empty string");
-      const strError = new Error("the data must be non-empty string") as Error & {status: number};
+      const strError = new Error("title, companyName, workMode, and status are required non-empty strings") as Error & {status: number};
       strError.status = 400;
       
       throw strError;
+    }
+
+    if (!workModeValidator(job.workMode)) {
+      const error = new Error(
+        `Invalid workMode '${job.workMode}'. Allowed values are: ${VALID_WORK_MODES.join(", ")}`
+      ) as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (!statusValidator(application.status)) {
+      const error = new Error(
+        `Invalid status '${application.status}'. Allowed values are: ${VALID_APPLICATION_STATUSES.join(", ")}`
+      ) as Error & { status: number };
+      error.status = 400;
+      throw error;
     }
 
     if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
@@ -100,9 +170,19 @@ export const createApplication = async (req: Request, res: Response) => {
       job_url, source)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
-      [job.title, job.companyName, job.location, job.workMode, job.employmentType,
-        job.salaryMin, job.salaryMax, job.salaryCurrency, job.description,
-        job.jobUrl, job.source]
+      [
+        job.title,
+        job.companyName,
+        toNullIfEmpty(job.location),
+        job.workMode,
+        toNullIfEmpty(job.employmentType),
+        toNumOrNull(job.salaryMin),
+        toNumOrNull(job.salaryMax),
+        toNullIfEmpty(job.salaryCurrency),
+        toNullIfEmpty(job.description),
+        toNullIfEmpty(job.jobUrl),
+        toNullIfEmpty(job.source)
+      ]
     )
 
     const result = await client.query(
@@ -110,7 +190,13 @@ export const createApplication = async (req: Request, res: Response) => {
       (user_id, job_id, status, notes, "appliedAt")
       VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_TIMESTAMP))
       RETURNING *, TO_CHAR("appliedAt", 'YYYY-MM-DD') AS "appliedAt"`,
-      [userId, jobResult.rows[0].id, application.status, application.notes, application.appliedAt || null]
+      [
+        userId,
+        jobResult.rows[0].id,
+        application.status,
+        toNullIfEmpty(application.notes),
+        toNullIfEmpty(application.appliedAt)
+      ]
     )
     await client.query("COMMIT")
     transactionBegin = false;
@@ -285,11 +371,6 @@ export const updateApplication = async (req: Request, res: Response) => {
   try {
     const applicationId = req.params.id;
     const userId = req.userId;
-    const {
-      job,
-      application
-    } = req.body;
-
     //Validators
     if (userId === undefined) {
       const error = new Error("Authentication required") as Error & { status: number };
@@ -306,16 +387,72 @@ export const updateApplication = async (req: Request, res: Response) => {
       throw strError;
     }
 
-    if (!stringValidator(job.title)
-      ||!stringValidator(job.companyName)
-      ||!stringValidator(job.workMode)
-      ||!stringValidator(application.status)) {
-      
+    if (!req.body || typeof req.body !== "object") {
+      const error = new Error("Request body is required") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    const {
+      job,
+      application
+    } = req.body;
+
+    if (!job && !application) {
+      const error = new Error("Request body must include job or application data") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (job !== undefined && (typeof job !== "object" || job === null)) {
+      const error = new Error("Job data must be an object") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (application !== undefined && (typeof application !== "object" || application === null)) {
+      const error = new Error("Application data must be an object") as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (
+      !stringValidator(job?.title) ||
+      !stringValidator(job?.companyName) ||
+      !stringValidator(job?.location) ||
+      !stringValidator(job?.workMode) ||
+      !stringValidator(job?.employmentType) ||
+      !stringValidator(job?.salaryCurrency) ||
+      !stringValidator(job?.description) ||
+      !stringValidator(job?.jobUrl) ||
+      !stringValidator(job?.source) ||
+      !stringValidator(application?.status) ||
+      !stringValidator(application?.notes)
+    ) {
       console.error("the data must be string");
-      const strError = new Error("the data must be string") as Error & {status: number};
+      const strError = new Error("the data must be string") as Error & { status: number };
       strError.status = 400;
-      
       throw strError;
+    }
+
+    if (job?.workMode !== undefined && job?.workMode !== null && job?.workMode !== "") {
+      if (!workModeValidator(job.workMode)) {
+        const error = new Error(
+          `Invalid workMode '${job.workMode}'. Allowed values are: ${VALID_WORK_MODES.join(", ")}`
+        ) as Error & { status: number };
+        error.status = 400;
+        throw error;
+      }
+    }
+
+    if (application?.status !== undefined && application?.status !== null && application?.status !== "") {
+      if (!statusValidator(application.status)) {
+        const error = new Error(
+          `Invalid status '${application.status}'. Allowed values are: ${VALID_APPLICATION_STATUSES.join(", ")}`
+        ) as Error & { status: number };
+        error.status = 400;
+        throw error;
+      }
     }
 
     if (!dateValidator(application?.appliedAt)) {
@@ -326,7 +463,7 @@ export const updateApplication = async (req: Request, res: Response) => {
       throw strError;
     }
 
-    if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
+    if (!numValidator(job?.salaryMin) || !numValidator(job?.salaryMax)) {
       console.error("the data must be number");
       const strError = new Error("the data must be number") as Error & {status: number};
       strError.status = 400;
@@ -357,9 +494,21 @@ export const updateApplication = async (req: Request, res: Response) => {
         WHERE id = (SELECT job_id FROM applications WHERE id = $12 AND user_id = $13)
           AND EXISTS (SELECT 1 FROM applications WHERE id = $12 AND user_id = $13)
         RETURNING *`,
-      [job.title, job.companyName, job.location, job.workMode, job.employmentType,
-        job.salaryMin, job.salaryMax, job.salaryCurrency, job.description,
-        job.jobUrl, job.source, applicationId, userId]
+      [
+        toNullIfEmpty(job?.title),
+        toNullIfEmpty(job?.companyName),
+        toNullIfEmpty(job?.location),
+        toNullIfEmpty(job?.workMode),
+        toNullIfEmpty(job?.employmentType),
+        toNumOrNull(job?.salaryMin),
+        toNumOrNull(job?.salaryMax),
+        toNullIfEmpty(job?.salaryCurrency),
+        toNullIfEmpty(job?.description),
+        toNullIfEmpty(job?.jobUrl),
+        toNullIfEmpty(job?.source),
+        applicationId,
+        userId
+      ]
     );
 
     if (jobResult.rowCount === 0) {
@@ -377,7 +526,13 @@ export const updateApplication = async (req: Request, res: Response) => {
         WHERE id = $4
           AND user_id = $5
         RETURNING *, TO_CHAR("appliedAt", 'YYYY-MM-DD') AS "appliedAt"`,
-      [application.status, application.notes, application.appliedAt || null, applicationId, userId]
+      [
+        toNullIfEmpty(application?.status),
+        toNullIfEmpty(application?.notes),
+        toNullIfEmpty(application?.appliedAt),
+        applicationId,
+        userId
+      ]
     );
 
     if (result.rowCount === 0) {
