@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { applications } from "@/lib/api";
-import type { Application } from "@/lib/types";
+import type { Application, ApplicationStatus } from "@/lib/types";
 import { ApplicationForm } from "@/components/application-form";
+import { QuickStatusSelect } from "@/components/quick-status-select";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   BriefcaseIcon,
   ArrowLeftIcon,
   ExternalLinkIcon,
   PencilIcon,
+  TrashIcon,
   XIcon,
   MapPinIcon,
   MonitorIcon,
@@ -22,14 +25,6 @@ import {
   StickyNoteIcon,
 } from "lucide-react";
 import { parseLocalDate } from "@/lib/utils";
-
-const STATUS_STYLES: Record<string, string> = {
-  applied: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  interview: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  withdrawn: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-};
 
 function DetailRow({
   icon,
@@ -62,14 +57,14 @@ export default function ApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     applications
       .getById(Number(id))
-      .then((res: any) => {
-        const item = Array.isArray(res.application)
-          ? res.application[0]
-          : res.application;
+      .then((res) => {
+        const item = res.application;
         if (!item) {
           setError("Application not found.");
         } else {
@@ -86,13 +81,35 @@ export default function ApplicationDetailPage() {
     // Re-fetch to get the updated data
     applications
       .getById(Number(id))
-      .then((res: any) => {
-        const item = Array.isArray(res.application)
-          ? res.application[0]
-          : res.application;
-        if (item) setApp(item);
+      .then((res) => {
+        if (res.application) setApp(res.application);
       })
       .catch(() => {});
+  }
+
+  async function handleQuickStatusChange(newStatus: ApplicationStatus) {
+    if (!app) return;
+    try {
+      await applications.update(Number(id), { application: { status: newStatus } });
+      setApp((prev) => (prev ? { ...prev, status: newStatus } : null));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      alert(e.response?.data?.message ?? e.message ?? "Failed to update status");
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteLoading(true);
+    try {
+      await applications.delete(Number(id));
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      alert(e.response?.data?.message ?? e.message ?? "Delete failed");
+      setDeleteLoading(false);
+    }
   }
 
   if (loading) {
@@ -121,53 +138,74 @@ export default function ApplicationDetailPage() {
     <>
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard")}
-            className="-ml-1"
-          >
-            <ArrowLeftIcon className="size-4" />
-            <span className="hidden sm:inline">Back</span>
-          </Button>
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/dashboard")}
+              className="-ml-1"
+            >
+              <ArrowLeftIcon className="size-4" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
 
-          <div className="flex flex-1 items-center gap-2 min-w-0">
-            <BriefcaseIcon className="size-4 shrink-0 text-primary" />
-            <span className="truncate font-semibold">{app.title}</span>
-            <span className="text-muted-foreground hidden sm:inline">·</span>
-            <span className="truncate text-sm text-muted-foreground hidden sm:inline">
-              {app.companyName}
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <BriefcaseIcon className="size-4 shrink-0 text-primary" />
+              <span className="truncate font-semibold">{app.title}</span>
+              <span className="text-muted-foreground hidden sm:inline">·</span>
+              <span className="truncate text-sm text-muted-foreground hidden sm:inline">
+                {app.companyName}
+              </span>
+            </div>
           </div>
 
-          <span
-            className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[app.status] ?? "bg-muted text-muted-foreground"}`}
-          >
-            {app.status}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:block">
+              <QuickStatusSelect
+                status={app.status}
+                onChange={handleQuickStatusChange}
+                size="sm"
+              />
+            </div>
 
-          <Button
-            size="sm"
-            variant={editing ? "outline" : "default"}
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? (
-              <>
-                <XIcon className="size-4" />
-                <span className="hidden sm:inline">Cancel</span>
-              </>
-            ) : (
-              <>
-                <PencilIcon className="size-4" />
-                <span className="hidden sm:inline">Edit</span>
-              </>
-            )}
-          </Button>
+            <Button
+              size="sm"
+              variant={editing ? "outline" : "default"}
+              onClick={() => setEditing((v) => !v)}
+            >
+              {editing ? (
+                <>
+                  <XIcon className="size-4" />
+                  <span className="hidden sm:inline">Cancel</span>
+                </>
+              ) : (
+                <>
+                  <PencilIcon className="size-4" />
+                  <span className="hidden sm:inline">Edit</span>
+                </>
+              )}
+            </Button>
+
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setDeleting(true)}
+              className="cursor-pointer"
+              title="Delete application"
+            >
+              <TrashIcon className="size-4" />
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
+
+            <div className="ml-1 pl-2 border-l border-border hidden sm:block">
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
         {/* ── Success banner ── */}
         {saved && (
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
@@ -190,16 +228,21 @@ export default function ApplicationDetailPage() {
           <div className="space-y-6">
             {/* Hero card */}
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold">{app.title}</h1>
                   <p className="mt-1 text-lg text-muted-foreground">{app.companyName}</p>
                 </div>
-                <span
-                  className={`mt-1 inline-flex shrink-0 items-center rounded-full px-3 py-1 text-sm font-medium capitalize ${STATUS_STYLES[app.status] ?? "bg-muted text-muted-foreground"}`}
-                >
-                  {app.status}
-                </span>
+                <div className="flex flex-col sm:items-end gap-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </span>
+                  <QuickStatusSelect
+                    status={app.status}
+                    onChange={handleQuickStatusChange}
+                    size="default"
+                  />
+                </div>
               </div>
 
               {app.jobUrl && (
@@ -294,6 +337,38 @@ export default function ApplicationDetailPage() {
           </div>
         )}
       </main>
+
+      {/* ── Delete confirm modal ── */}
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-background p-6 shadow-2xl">
+            <h2 className="text-lg font-semibold">Delete application?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This will permanently remove{" "}
+              <strong>
+                {app.title} at {app.companyName}
+              </strong>
+              . This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleting(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

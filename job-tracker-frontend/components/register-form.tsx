@@ -37,8 +37,9 @@ export function RegisterForm({
     try {
       await auth.register(name, email, password);
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? err.message ?? "Registration failed");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(e.response?.data?.message ?? e.message ?? "Registration failed");
     } finally {
       setLoading(false);
     }

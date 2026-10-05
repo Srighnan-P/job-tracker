@@ -93,8 +93,9 @@ export function ApplicationForm({
         await applications.create(data);
       }
       onSuccess();
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? err.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(e.response?.data?.message ?? e.message ?? "Something went wrong");
     } finally {
       setLoading(false);
     }
