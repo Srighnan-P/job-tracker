@@ -20,6 +20,7 @@ import {
   ArrowUpDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
+  ChevronDownIcon,
   RotateCcwIcon,
   LayersIcon,
 } from "lucide-react";
@@ -181,7 +182,7 @@ export default function DashboardPage() {
     try {
       await auth.logout();
     } finally {
-      router.push("/login");
+      router.replace("/login");
     }
   }
 
@@ -447,49 +448,58 @@ export default function DashboardPage() {
             {/* Filter and Sort Controls */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Status Select */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as ApplicationStatus | "all")}
-                aria-label="Filter by status"
-                className="h-10 rounded-full border border-input bg-input/20 px-3.5 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-              >
-                <option value="all">Status: All</option>
-                <option value="applied">Status: Applied</option>
-                <option value="interview">Status: Interview</option>
-                <option value="offer">Status: Offer</option>
-                <option value="rejected">Status: Rejected</option>
-                <option value="withdrawn">Status: Withdrawn</option>
-              </select>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as ApplicationStatus | "all")}
+                  aria-label="Filter by status"
+                  className="h-10 appearance-none rounded-full border border-input bg-input/20 pl-3.5 pr-8 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-colors"
+                >
+                  <option value="all">Status: All</option>
+                  <option value="applied">Status: Applied</option>
+                  <option value="interview">Status: Interview</option>
+                  <option value="offer">Status: Offer</option>
+                  <option value="rejected">Status: Rejected</option>
+                  <option value="withdrawn">Status: Withdrawn</option>
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 size-3.5 text-muted-foreground" />
+              </div>
 
               {/* Work Mode Select */}
-              <select
-                value={workModeFilter}
-                onChange={(e) => setWorkModeFilter(e.target.value)}
-                aria-label="Filter by work mode"
-                className="h-10 rounded-full border border-input bg-input/20 px-3.5 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-              >
-                <option value="all">Mode: All</option>
-                <option value="remote">Mode: Remote</option>
-                <option value="hybrid">Mode: Hybrid</option>
-                <option value="onsite">Mode: Onsite</option>
-              </select>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={workModeFilter}
+                  onChange={(e) => setWorkModeFilter(e.target.value)}
+                  aria-label="Filter by work mode"
+                  className="h-10 appearance-none rounded-full border border-input bg-input/20 pl-3.5 pr-8 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-colors"
+                >
+                  <option value="all">Mode: All</option>
+                  <option value="remote">Mode: Remote</option>
+                  <option value="hybrid">Mode: Hybrid</option>
+                  <option value="onsite">Mode: Onsite</option>
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 size-3.5 text-muted-foreground" />
+              </div>
 
               {/* Sort Select */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                aria-label="Sort applications"
-                className="h-10 rounded-full border border-input bg-input/20 px-3.5 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-              >
-                <option value="date-desc">Date: Newest first</option>
-                <option value="date-asc">Date: Oldest first</option>
-                <option value="company-asc">Company: A to Z</option>
-                <option value="company-desc">Company: Z to A</option>
-                <option value="role-asc">Role: A to Z</option>
-                <option value="role-desc">Role: Z to A</option>
-                <option value="salary-desc">Salary: High to Low</option>
-                <option value="salary-asc">Salary: Low to High</option>
-              </select>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  aria-label="Sort applications"
+                  className="h-10 appearance-none rounded-full border border-input bg-input/20 pl-3.5 pr-8 text-xs font-medium text-foreground focus-visible:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-colors"
+                >
+                  <option value="date-desc">Date: Newest first</option>
+                  <option value="date-asc">Date: Oldest first</option>
+                  <option value="company-asc">Company: A to Z</option>
+                  <option value="company-desc">Company: Z to A</option>
+                  <option value="role-asc">Role: A to Z</option>
+                  <option value="role-desc">Role: Z to A</option>
+                  <option value="salary-desc">Salary: High to Low</option>
+                  <option value="salary-asc">Salary: Low to High</option>
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 size-3.5 text-muted-foreground" />
+              </div>
 
               {/* Clear filters button */}
               {hasActiveFilters && (

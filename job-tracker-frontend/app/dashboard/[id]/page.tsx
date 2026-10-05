@@ -143,8 +143,14 @@ export default function ApplicationDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/dashboard")}
-              className="-ml-1"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.replace("/dashboard");
+                }
+              }}
+              className="-ml-1 cursor-pointer"
             >
               <ArrowLeftIcon className="size-4" />
               <span className="hidden sm:inline">Back</span>

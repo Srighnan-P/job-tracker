@@ -1,10 +1,43 @@
-"use client"
+"use client";
 
-import { LoginForm } from "@/components/login-form"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { GalleryVerticalEndIcon } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "@/lib/api";
+import { LoginForm } from "@/components/login-form";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { GalleryVerticalEndIcon } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    auth
+      .me()
+      .then(() => {
+        if (!ignore) {
+          router.replace("/dashboard");
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setChecking(false);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground text-sm">Loading…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="relative hidden bg-muted lg:block">
