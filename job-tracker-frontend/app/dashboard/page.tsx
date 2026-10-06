@@ -346,10 +346,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-40 shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
+        <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 font-semibold">
             <BriefcaseIcon className="size-5 text-primary" />
             Job Tracker
@@ -372,14 +372,14 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <main className="flex-1 min-h-0 flex flex-col w-full px-4 pt-3 pb-3 sm:px-6 lg:px-8">
         {/* ── Summary cards (Clickable status filters) ── */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="shrink-0 mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {/* "All" Card */}
           <button
             type="button"
             onClick={() => handleStatusCardClick("all")}
-            className={`rounded-2xl border p-4 text-center transition-all cursor-pointer text-left sm:text-center ${
+            className={`rounded-2xl border p-3 sm:p-3.5 text-center transition-all cursor-pointer text-left sm:text-center ${
               statusFilter === "all"
                 ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02] shadow-sm"
                 : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
@@ -404,7 +404,7 @@ export default function DashboardPage() {
                   type="button"
                   key={status}
                   onClick={() => handleStatusCardClick(status)}
-                  className={`rounded-2xl border p-4 text-center transition-all cursor-pointer ${
+                  className={`rounded-2xl border p-3 sm:p-3.5 text-center transition-all cursor-pointer ${
                     style.card
                   } ${isActive ? `${style.activeBorder} scale-[1.02] shadow-sm font-semibold` : ""}`}
                 >
@@ -421,7 +421,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Search & Filter & Sort Toolbar ── */}
-        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+        <div className="shrink-0 mb-3 flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:p-3.5 shadow-xs">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -564,7 +564,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Table header & Add button ── */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="shrink-0 mb-2.5 flex items-center justify-between">
           <h1 className="text-xl font-semibold">
             Applications{" "}
             <span className="text-base font-normal text-muted-foreground">
@@ -580,7 +580,7 @@ export default function DashboardPage() {
 
         {/* ── Table ── */}
         {apps.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-8 text-center bg-card">
             <BriefcaseIcon className="mb-3 size-10 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               No applications yet.{" "}
@@ -593,7 +593,7 @@ export default function DashboardPage() {
             </p>
           </div>
         ) : sortedAndFilteredApps.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-8 text-center bg-card">
             <SearchIcon className="mb-3 size-10 text-muted-foreground/40" />
             <p className="text-base font-medium">No matching applications</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -610,13 +610,13 @@ export default function DashboardPage() {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border">
+          <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-border bg-card shadow-xs">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50 text-left text-xs text-muted-foreground select-none">
+              <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs">
+                <tr className="text-left text-xs text-muted-foreground select-none">
                   {/* Clickable Role Header */}
                   <th
-                    className="px-4 py-3 font-medium cursor-pointer hover:text-foreground transition-colors"
+                    className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border px-4 py-3 font-medium cursor-pointer hover:text-foreground transition-colors"
                     onClick={() => toggleSort("role")}
                     title="Sort by Role"
                   >
@@ -634,7 +634,7 @@ export default function DashboardPage() {
 
                   {/* Clickable Company Header */}
                   <th
-                    className="px-4 py-3 font-medium cursor-pointer hover:text-foreground transition-colors"
+                    className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border px-4 py-3 font-medium cursor-pointer hover:text-foreground transition-colors"
                     onClick={() => toggleSort("company")}
                     title="Sort by Company"
                   >
@@ -651,14 +651,34 @@ export default function DashboardPage() {
                   </th>
 
                   {/* Status Header */}
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">Status</th>
+                  <th className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border hidden px-4 py-3 font-medium sm:table-cell">Status</th>
 
                   {/* Mode Header */}
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">Mode</th>
+                  <th className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border hidden px-4 py-3 font-medium md:table-cell">Mode</th>
+
+                  {/* Clickable Salary Header */}
+                  <th
+                    className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border hidden px-4 py-3 font-medium xl:table-cell cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setSortBy((prev) => (prev === "salary-desc" ? "salary-asc" : "salary-desc"));
+                    }}
+                    title="Sort by Salary"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Salary</span>
+                      {sortBy === "salary-asc" ? (
+                        <ArrowUpIcon className="size-3 text-primary" />
+                      ) : sortBy === "salary-desc" ? (
+                        <ArrowDownIcon className="size-3 text-primary" />
+                      ) : (
+                        <ArrowUpDownIcon className="size-3 opacity-40 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
 
                   {/* Clickable Date Header */}
                   <th
-                    className="hidden px-4 py-3 font-medium lg:table-cell cursor-pointer hover:text-foreground transition-colors"
+                    className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border hidden px-4 py-3 font-medium lg:table-cell cursor-pointer hover:text-foreground transition-colors"
                     onClick={() => toggleSort("date")}
                     title="Sort by Date"
                   >
@@ -674,7 +694,7 @@ export default function DashboardPage() {
                     </div>
                   </th>
 
-                  <th className="px-4 py-3" />
+                  <th className="sticky top-0 z-10 bg-muted/95 backdrop-blur-xs border-b border-border px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -682,7 +702,7 @@ export default function DashboardPage() {
                   <tr
                     key={app.applicationId}
                     onClick={() => router.push(`/dashboard/${app.applicationId}`)}
-                    className={`cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/40 active:bg-muted/60 ${
+                    className={`cursor-pointer border-b border-border transition-colors hover:bg-muted/40 active:bg-muted/60 ${
                       i % 2 === 0 ? "" : "bg-muted/10"
                     }`}
                   >
@@ -740,6 +760,13 @@ export default function DashboardPage() {
 
                     <td className="hidden px-4 py-3 capitalize text-muted-foreground md:table-cell">
                       {app.workMode}
+                    </td>
+
+                    <td className="hidden px-4 py-3 text-muted-foreground xl:table-cell">
+                      {app.salaryMin || app.salaryMax
+                        ? [app.salaryMin, app.salaryMax].filter(Boolean).join(" – ") +
+                          (app.salaryCurrency ? ` ${app.salaryCurrency}` : "")
+                        : "—"}
                     </td>
 
                     <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">
@@ -830,6 +857,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
