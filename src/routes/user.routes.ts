@@ -1,5 +1,7 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { validate } from "../middlewares/validate.middleware.js";
+import { registerSchema, loginSchema } from "../schemas/user.schema.js";
 
 import {
   registerUser,
@@ -10,8 +12,8 @@ import {
 
 const router = express.Router();
 
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", validate(registerSchema), registerUser);
+router.post("/login", validate(loginSchema), loginUser);
 router.post("/logout", authenticate, logoutUser);
 router.get("/me", authenticate, getUserProfile);
 router.get("/test", authenticate, (req, res) => {

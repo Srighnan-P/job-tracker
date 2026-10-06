@@ -1,45 +1,12 @@
 import type { Request, Response } from "express";
 import pool from "../config/db.js";
 
-export const VALID_APPLICATION_STATUSES = [
-  "applied",
-  "interview",
-  "offer",
-  "rejected",
-  "withdrawn",
-] as const;
-
-export type ApplicationStatus = (typeof VALID_APPLICATION_STATUSES)[number];
-
-export const VALID_WORK_MODES = [
-  "remote",
-  "hybrid",
-  "onsite",
-] as const;
-
-export type WorkMode = (typeof VALID_WORK_MODES)[number];
-
-const statusValidator = (status: unknown): status is ApplicationStatus => {
-  return typeof status === "string" && (VALID_APPLICATION_STATUSES as readonly string[]).includes(status);
-};
-
-const workModeValidator = (mode: unknown): mode is WorkMode => {
-  return typeof mode === "string" && (VALID_WORK_MODES as readonly string[]).includes(mode);
-};
-
-const stringValidator = (str: unknown) => {
-  if (str != undefined && str !== null)
-    return typeof str === "string";
-  else
-    return true;
-};
-
-const stringNotNullValidator = (str: unknown) => {
-  if (typeof (str) !== "string" || str.trim() === "") {
-    return false;
-  }
-  return true;
-};
+export {
+  VALID_APPLICATION_STATUSES,
+  type ApplicationStatus,
+  VALID_WORK_MODES,
+  type WorkMode,
+} from "../schemas/application.schema.js";
 
 const toNullIfEmpty = (val: unknown) => {
   if (val === undefined || val === null) {
@@ -58,33 +25,6 @@ const toNumOrNull = (num: unknown) => {
   return Number(num);
 };
 
-const numValidator = (num: unknown) => {
-  if (typeof num === "undefined" || num === null || num === "") {
-    return true;
-  }
-
-  if (typeof num === "number") {
-    return Number.isFinite(num);
-  }
-
-  if (typeof num === "string") {
-    return num.trim() !== "" && !Number.isNaN(Number(num));
-  }
-
-  return false;
-};
-
-const dateValidator = (d: unknown) => {
-  if (d === undefined || d === null || d === "") {
-    return true;
-  }
-  if (typeof d === "string" || d instanceof Date) {
-    const parsed = new Date(d as string | Date);
-    return !Number.isNaN(parsed.getTime());
-  }
-  return false;
-};
-
 //Create application
 export const createApplication = async (req: Request, res: Response) => {
   let client;
@@ -98,69 +38,13 @@ export const createApplication = async (req: Request, res: Response) => {
       throw error;
     }
 
-    if (!req.body || typeof req.body !== "object") {
-      const error = new Error("Request body is required") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
     const {
       job,
       application
     } = req.body;
 
-    if (!job || typeof job !== "object" || !application || typeof application !== "object") {
-      const error = new Error("Both job and application objects are required in request body") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (!stringNotNullValidator(job.title)
-      || !stringNotNullValidator(job.companyName)
-      || !stringNotNullValidator(job.workMode)
-      || !stringNotNullValidator(application.status)) {
-      
-      console.error("the data must be non-empty string");
-      const strError = new Error("title, companyName, workMode, and status are required non-empty strings") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
-
-    if (!workModeValidator(job.workMode)) {
-      const error = new Error(
-        `Invalid workMode '${job.workMode}'. Allowed values are: ${VALID_WORK_MODES.join(", ")}`
-      ) as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (!statusValidator(application.status)) {
-      const error = new Error(
-        `Invalid status '${application.status}'. Allowed values are: ${VALID_APPLICATION_STATUSES.join(", ")}`
-      ) as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (!numValidator(job.salaryMin) || !numValidator(job.salaryMax)) {
-      
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
-
-    if (!dateValidator(application.appliedAt)) {
-      console.error("the applied date must be a valid date");
-      const strError = new Error("the applied date must be a valid date") as Error & {status: number};
-      strError.status = 400;
-      throw strError;
-    }
-
     client = await pool.connect();
-    await client.query("BEGIN")
+    await client.query("BEGIN");
     transactionBegin = true;
 
     const jobResult = await client.query(
@@ -236,13 +120,6 @@ export const getAllApplications = async (req: Request, res: Response) => {
     }
     
 
-    if (!numValidator(userId)) {
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
 
     const result = await pool.query(
       ` SELECT
@@ -300,21 +177,6 @@ export const getApplicationById = async (req: Request, res: Response) => {
     }
     
 
-    if (!numValidator(userId)) {
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
-
-    if (!numValidator(applicationId)) {
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
 
     const result = await pool.query(
       ` SELECT
@@ -379,97 +241,10 @@ export const updateApplication = async (req: Request, res: Response) => {
     }
     
 
-    if (!numValidator(userId) || !numValidator(applicationId)) {
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
-
-    if (!req.body || typeof req.body !== "object") {
-      const error = new Error("Request body is required") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
     const {
       job,
       application
     } = req.body;
-
-    if (!job && !application) {
-      const error = new Error("Request body must include job or application data") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (job !== undefined && (typeof job !== "object" || job === null)) {
-      const error = new Error("Job data must be an object") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (application !== undefined && (typeof application !== "object" || application === null)) {
-      const error = new Error("Application data must be an object") as Error & { status: number };
-      error.status = 400;
-      throw error;
-    }
-
-    if (
-      !stringValidator(job?.title) ||
-      !stringValidator(job?.companyName) ||
-      !stringValidator(job?.location) ||
-      !stringValidator(job?.workMode) ||
-      !stringValidator(job?.employmentType) ||
-      !stringValidator(job?.salaryCurrency) ||
-      !stringValidator(job?.description) ||
-      !stringValidator(job?.jobUrl) ||
-      !stringValidator(job?.source) ||
-      !stringValidator(application?.status) ||
-      !stringValidator(application?.notes)
-    ) {
-      console.error("the data must be string");
-      const strError = new Error("the data must be string") as Error & { status: number };
-      strError.status = 400;
-      throw strError;
-    }
-
-    if (job?.workMode !== undefined && job?.workMode !== null && job?.workMode !== "") {
-      if (!workModeValidator(job.workMode)) {
-        const error = new Error(
-          `Invalid workMode '${job.workMode}'. Allowed values are: ${VALID_WORK_MODES.join(", ")}`
-        ) as Error & { status: number };
-        error.status = 400;
-        throw error;
-      }
-    }
-
-    if (application?.status !== undefined && application?.status !== null && application?.status !== "") {
-      if (!statusValidator(application.status)) {
-        const error = new Error(
-          `Invalid status '${application.status}'. Allowed values are: ${VALID_APPLICATION_STATUSES.join(", ")}`
-        ) as Error & { status: number };
-        error.status = 400;
-        throw error;
-      }
-    }
-
-    if (!dateValidator(application?.appliedAt)) {
-      console.error("the applied date must be a valid date");
-      const strError = new Error("the applied date must be a valid date") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
-
-    if (!numValidator(job?.salaryMin) || !numValidator(job?.salaryMax)) {
-      console.error("the data must be number");
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
 
     //Repository
     
@@ -582,12 +357,6 @@ export const deleteApplication = async (req: Request, res: Response) => {
       throw error;
     }
     
-    if (!numValidator(userId) || !numValidator(applicationId)) {
-      const strError = new Error("the data must be number") as Error & {status: number};
-      strError.status = 400;
-      
-      throw strError;
-    }
 
     client = await pool.connect();
     await client.query("BEGIN")

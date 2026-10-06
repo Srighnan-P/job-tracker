@@ -13,13 +13,6 @@ if (!JWT_SECRET) {
 }
 
 
-const stringNotNullValidator = (str: unknown) => {
-  if (typeof(str) !== "string" || str === "") {
-    return false;
-  }
-  return true;
-}
-
 export const registerUser = async (req: Request, res: Response) => {
   try {
     //Request
@@ -28,17 +21,6 @@ export const registerUser = async (req: Request, res: Response) => {
       email,
       password
     } = req.body;
-    
-    //Validation
-    if (!stringNotNullValidator(name)
-      || !stringNotNullValidator(email)
-      || !stringNotNullValidator(password)) 
-    {
-        console.error("the data must be string");
-        const strError = new Error("the data must be string") as Error & {status: number};
-        strError.status = 400;
-        throw strError;
-    }
 
     //Checking if email already exists
     const is_mail_exists = await pool.query(
@@ -105,15 +87,6 @@ export const loginUser = async (req: Request, res: Response) => {
       password
     } = req.body;
 
-    //Validation
-    if (!stringNotNullValidator(email)
-      || !stringNotNullValidator(password)) 
-    {
-        console.error("the data must be string");
-        const strError = new Error("the data must be string") as Error & {status: number};
-        strError.status = 400;
-        throw strError;
-    }
 
     //Checking if email exists
     const userResult = await pool.query(
